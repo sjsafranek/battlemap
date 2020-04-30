@@ -3,64 +3,6 @@
 var App = function(mapId) {
     var self = this;
 
-    // resources
-    this.elements = {
-
-        $cellSizeInput: $('<input>', {
-                type: 'number',
-                min: 5,
-                max: 1000,
-                value: 100
-            })
-            .on('change', function(e) {
-                self.onCellSizeChange(e);
-            }),
-
-        $fileUploadInput: $('<input>', {
-                type: 'file',
-                accept: 'image/png, image/jpeg'
-            })
-            .on('change', function(e) {
-                self.onFileUpload(this.files[0]);
-            }),
-
-        $enableDrawModeInput: $('<input>', {
-                type: 'checkbox'
-            })
-            .on('change', function(e) {
-                $(this).is(':checked') ?
-                    self.enableDraw() : self.disableDraw();
-            }),
-
-        $lineWidthInput: $('<input>', {
-                type: 'number',
-                step: 2,
-                min: 2,
-                max: 64,
-                value: 4
-            })
-            .on('change', function(e) {
-                self.onLineWidthChange(parseInt(this.value));
-            }),
-
-        $strokeColorInput: $('<input>', {
-                type: 'color',
-                value: '#000000'
-            })
-            .on('change', function(e) {
-                self.onStrokeColorChange(this.value);
-            }),
-
-        $eraseDrawingInput: $('<input>', {
-                type: 'checkbox'
-            })
-            .on('change', function(e) {
-                $(this).is(':checked') ?
-                    self.enableErase() : self.disableErase();
-            }),
-
-    };
-
     // container for layers
     this.layers = {
         imageLayer: null,
@@ -78,20 +20,20 @@ var App = function(mapId) {
         self.addMarker(e);
     });
 
+    // enableFileDrop(
+    //     $(this.map._container),
+    //     function(file) {
+    //         self.onFileUpload(file);
+    //     }
+    // );
+
+    this._addControls();
+    this._addDrawing();
+
     // initialize grid
 	this.map.fitBounds([[0, 0], [2000, 2000]]);
     this.drawGrid();
     this.map.setZoom(this.map.getZoom()+1)
-
-    enableFileDrop(
-        $(this.map._container),
-        function(file) {
-            self.onFileUpload(file);
-        }
-    );
-
-    this._addDrawing();
-    this._addControls();
 }
 
 App.prototype._addDrawing = function() {
@@ -152,39 +94,155 @@ App.prototype.clearDrawing = function() {
 
 App.prototype._addControls = function() {
     var self = this;
+
+    // resources
+    this.elements = {
+
+        $cellSizeInput: $('<input>', {
+                id: 'cellSize',
+                type: 'number',
+                min: 5,
+                max: 1000,
+                value: 100
+            })
+            .addClass('form-control form-control-sm')
+            .on('change', function(e) {
+                self.onCellSizeChange(e);
+            }),
+
+        $fileUploadInput: $('<input>', {
+                id: 'fileUpload',
+                type: 'file',
+                accept: 'image/png, image/jpeg'
+            })
+            .addClass('form-control-file')
+            .on('change', function(e) {
+                self.onFileUpload(this.files[0]);
+            }),
+
+        $enableDrawModeInput: $('<input>', {
+                id: 'enableDraw',
+                type: 'checkbox'
+            })
+            .addClass('form-check-input')
+            .on('change', function(e) {
+                $(this).is(':checked') ?
+                    self.enableDraw() : self.disableDraw();
+            }),
+
+        $lineWidthInput: $('<input>', {
+                id: 'lineWidth',
+                type: 'number',
+                step: 2,
+                min: 2,
+                max: 64,
+                value: 4
+            })
+            .addClass('form-control form-control-sm')
+            .on('change', function(e) {
+                self.onLineWidthChange(parseInt(this.value));
+            }),
+
+        $strokeColorInput: $('<input>', {
+                id: 'strokeColor',
+                type: 'color',
+                value: '#000000'
+            })
+            .addClass('form-control form-control-sm')
+            .on('change', function(e) {
+                self.onStrokeColorChange(this.value);
+            }),
+
+        $eraseDrawingInput: $('<input>', {
+                id: 'eraseDrawing',
+                type: 'checkbox'
+            })
+            .addClass('form-check-input')
+            .on('change', function(e) {
+                $(this).is(':checked') ?
+                    self.enableErase() : self.disableErase();
+            }),
+
+    };
+
     this.controls = L.control({position: 'topright'});
     this.controls.onAdd = function(map) {
         return $('<div>')
             .addClass('leaflet-control controls')
+            .on('contextmenu', function(event) {
+                event.stopPropagation();
+            })
             .append(
-                $('<div>').append(
-                    self.elements.$fileUploadInput
-                ),
-                $('<div>').append(
-                    'Grid size (pixels) ',
-                    self.elements.$cellSizeInput
-                ),
-                $('<div>').append(
-                    'Enable draw mode ',
-                    self.elements.$enableDrawModeInput
-                ),
+
                 $('<div>')
-                    .addClass('draw-controls')
+                    .addClass('form-group mb-2')
                     .append(
-                        $('<div>').append(
-                            'Line width ',
-                            self.elements.$lineWidthInput
-                        ),
-                        $('<div>').append(
-                            'Stroke color ',
-                            self.elements.$strokeColorInput
-                        ),
-                        $('<div>').append(
-                            'Erase ',
-                            self.elements.$eraseDrawingInput
-                        )
+                        $('<label>', {for: 'fileUpload'})
+                            .addClass('form-check-label')
+                            .append('Background Image'),
+                        self.elements.$fileUploadInput
+                    ),
+
+                $('<div>')
+                    .addClass('form-group row mb-2')
+                    .append(
+                        $('<label>', {for: 'cellSize'})
+                            .addClass('col-sm-4 col-form-label')
+                            .append('Grid Size'),
+                        $('<div>')
+                            .addClass('col-sm-8')
+                            .append(
+                                self.elements.$cellSizeInput
+                            )
+                    ),
+
+                $('<div>')
+                    .addClass('form-group mb-2 form-check form-check-inline')
+                    .append(
+                        self.elements.$enableDrawModeInput,
+                        $('<label>', {for: 'enableDraw'})
+                            .addClass('form-check-label')
+                            .append('Draw mode')
+                    ),
+
+                $('<div>')
+                    .addClass('draw-controls pl-4')
+                    .append(
+                        $('<div>')
+                            .addClass('form-group row mb-2')
+                            .append(
+                                $('<label>', {for: 'lineWidth'})
+                                    .addClass('col-sm-3 col-form-label')
+                                    .append('Width'),
+                                $('<div>')
+                                    .addClass('col-sm-9')
+                                    .append(
+                                        self.elements.$lineWidthInput
+                                    )
+                            ),
+                        $('<div>')
+                            .addClass('form-group row mb-2')
+                            .append(
+                                $('<label>', {for: 'strokeColor'})
+                                    .addClass('col-sm-3 col-form-label')
+                                    .append('Color'),
+                                $('<div>')
+                                    .addClass('col-sm-9')
+                                    .append(
+                                        self.elements.$strokeColorInput
+                                    )
+                            ),
+                        $('<div>')
+                            .addClass('form-group mb-2 form-check form-check-inline')
+                            .append(
+                                self.elements.$eraseDrawingInput,
+                                $('<label>', {for: 'eraseDrawing'})
+                                    .addClass('form-check-label')
+                                    .append('Erase')
+                            )
                     )
                     .hide()
+
             )[0];
     };
     this.controls.addTo(this.map);
