@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html>
+    <head>
+
+    	<title>CRS.Simple example - Leaflet</title>
+
+    	<meta charset="utf-8" />
+    	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    	<link rel="shortcut icon" type="image/x-icon" href="docs/images/favicon.ico" />
+
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css" integrity="sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ==" crossorigin=""/>
+        <script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js" integrity="sha512-gZwIG9x3wUXg2hdXF6+rVkLF/0Vi9U8D2Ntg4Ga5I5BZpVkVxlJWbSQtXPSiUTtC0TjtGOmxa1AJPuV0CPthew==" crossorigin=""></script>
+
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+
+    	<style>
+
+
+            body {
+                padding: 0;
+                margin: 0;
+            }
+
+            html,
+            body,
+            #map
+            {
+                height: 100%;
+                width: 100%;
+            }
+
+
+
+            /*    by Chtiwi Malek      */
+            /* http://www.codicode.com */
+            body {
+                /*margin: 0;*/
+                /*overflow:hidden;*/
+                /*height: 100%;*/
+                /*width: 100%;*/
+            }
+
+            /*#drawCanvas {
+                background: transparent;
+                position: absolute;
+            }
+
+            #gridCanvas {
+                background-color: #fff;
+                position: absolute;
+                width: 100%;
+                height: 100%;
+            }*/
+
+            .controls {
+                position:absolute;
+                top: 8px;
+                right: 8px;
+                background-color:#2277dd;
+                padding: 5px;
+                margin: 2px;
+                color: #fff;
+                -webkit-border-radius: 4px;
+                border-radius: 4px;
+            }
+
+
+
+    	</style>
+
+    </head>
+    <body>
+
+        <div id='map'></div>
+
+        <!-- <canvas id="gridCanvas"></canvas> -->
+        <!-- <canvas id="drawCanvas"></canvas> -->
+        <div class="controls">
+            Grid size (pixels) <input id="cellSize" type="number" min=5 max=1000 value=100>
+            <!-- <button id="clearDrawCanvas">Clear Area</button>
+            Line width :
+            <select id="selWidth">
+                <option value="1">1</option>
+                <option value="3">3</option>
+                <option value="5" selected="selected">5</option>
+                <option value="7">7</option>
+                <option value="9">9</option>
+                <option value="11">11</option>
+            </select>
+            Color :
+            <select id="selColor">
+                <option value="black">black</option>
+                <option value="blue" selected="selected">blue</option>
+                <option value="red">red</option>
+                <option value="green">green</option>
+                <option value="yellow">yellow</option>
+                <option value="gray">gray</option>
+                <option value="white">white</option>
+            </select> -->
+        </div>
+
+
+
+
+        <script>
+
+
+
+            // by Chtiwi Malek
+            // http://www.codicode.com
+            function enableDraw() {
+                let mousePressed = false;
+                let lastX, lastY;
+
+                let canvas = document.getElementById('drawCanvas');
+                let context = canvas.getContext('2d')
+                canvas.width = $(window).width();
+                canvas.height = 1000;
+
+                $(canvas).mousedown(function (e) {
+                    mousePressed = true;
+                    Draw(e.pageX, e.pageY, false);
+                });
+
+                $(canvas).mousemove(function (e) {
+                    if (mousePressed) {
+                        Draw(e.pageX , e.pageY , true);
+                    }
+                });
+
+                $(canvas).mouseup(function (e) {
+                    mousePressed = false;
+                });
+
+                $(canvas).mouseleave(function (e) {
+                    mousePressed = false;
+                });
+
+                function Draw(x, y, isDown) {
+                    if (isDown) {
+                        context.beginPath();
+                        context.strokeStyle = $('#selColor').val();
+                        context.lineWidth = $('#selWidth').val();
+                        context.lineJoin = "round";
+                        context.moveTo(lastX, lastY);
+                        context.lineTo(x, y);
+                        context.closePath();
+                        context.stroke();
+                    }
+                    lastX = x; lastY = y;
+                }
+
+                $("#clearDrawCanvas").on('click', function(e) {
+                    context.setTransform(1, 0, 0, 1, 0, 0);
+                    context.clearRect(0, 0, context.canvas.width, context.canvas.height);
+                });
+            }
+
+            // enableDraw();
+                        //
+                        //
+                        // function enableGrid (height, width) {
+                        //     let canvas = document.getElementById('gridCanvas');
+                        //     let context = canvas.getContext('2d')
+                        //     canvas.width  = $(window).width();
+                        //     canvas.height = 1000;
+                        //
+                        //     let s = 28;
+                        //     let nX = Math.floor(canvas.width / s) - 2;
+                        //     let nY = Math.floor(canvas.height / s) - 2;
+                        //     let pX = canvas.width - nX * s;
+                        //     let pY = canvas.height - nY * s;
+                        //
+                        //     // Bonus code for choosing nX instead of s
+                        //     // let nX = 20;
+                        //     // let s = Math.floor(this.width / (nX + 2));
+                        //     // let pX = this.width - nX * s;
+                        //     // let nY = Math.floor((this.height - pX) / (this.width - pX) * nX);
+                        //     // let pY = this.height - nY * s;
+                        //
+                        //     let pL = Math.ceil(pX / 2) - 0.5;
+                        //     let pT = Math.ceil(pY / 2) - 0.5;
+                        //     let pR = canvas.width - nX * s - pL;
+                        //     let pB = canvas.height - nY * s - pT;
+                        //
+                        //     context.strokeStyle = 'lightgrey';
+                        //     context.beginPath();
+                        //     for (var x = pL; x <= canvas.width - pR; x += s) {
+                        //         context.moveTo(x, pT);
+                        //         context.lineTo(x, canvas.height - pB);
+                        //     }
+                        //     for (var y = pT; y <= canvas.height - pB; y += s) {
+                        //         context.moveTo(pL, y);
+                        //         context.lineTo(canvas.width - pR, y);
+                        //     }
+                        //     context.stroke();
+                        // }
+
+
+            // enableGrid();
+
+
+
+
+        	var map = L.map('map', {
+        		crs: L.CRS.Simple,
+                minZoom: -5
+        	});
+        	map.fitBounds([[0,0], [1000,1000]]);
+
+            // map.createPane('grid');
+            // var pane = map.getPane('grid');
+            // $(pane).append(
+            //     $('<canvas>').attr('id', 'grid')
+            // );
+
+            map.imageLayer = null;
+            map.gridLayer = null;
+
+
+            function enableGrid(bounds) {
+                let cellSize = parseInt($('#cellSize').val());
+
+                // cleanup old layer
+                map.gridLayer && map.gridLayer.remove();
+
+                let canvas = $('<canvas>')[0];
+                let context = canvas.getContext('2d');
+                canvas.height = bounds[1][0];
+                canvas.width  = bounds[1][1];
+
+                // let s = 28;
+                let s = cellSize;
+                let nX = Math.floor(canvas.width / s) - 2;
+                let nY = Math.floor(canvas.height / s) - 2;
+                let pX = canvas.width - nX * s;
+                let pY = canvas.height - nY * s;
+
+                let pL = Math.ceil(pX / 2) - 0.5;
+                let pT = Math.ceil(pY / 2) - 0.5;
+                let pR = canvas.width - nX * s - pL;
+                let pB = canvas.height - nY * s - pT;
+
+                context.strokeStyle = 'black';
+                context.lineWidth = 2;
+                context.setLineDash([5, 3])
+                context.beginPath();
+                for (var x = pL; x <= canvas.width - pR; x += s) {
+                    context.moveTo(x, pT);
+                    context.lineTo(x, canvas.height - pB);
+                }
+                for (var y = pT; y <= canvas.height - pB; y += s) {
+                    context.moveTo(pL, y);
+                    context.lineTo(canvas.width - pR, y);
+                }
+                context.stroke();
+
+                var gridLayer = L.imageOverlay(canvas.toDataURL(), bounds);
+                gridLayer.addTo(map);
+                map.gridLayer = gridLayer;
+            }
+
+
+            function enableFileDrop($elem, callback) {
+            	$elem.get(0).ondrop = function(e) {
+            		e.preventDefault();
+            		$(this).css('outline', 'none');
+            		var file = e.dataTransfer.files[0];
+            		callback && callback(file);
+            	}
+            	$elem.get(0).ondragover = $elem.get(0).ondragenter = function(e) {
+            		e.preventDefault();
+            		$(this).css('outline', '2px dashed #92b0b3');
+            	};
+            	$elem.get(0).ondragstart = function(e) {
+            		e.preventDefault();
+            		$(this).css('outline', '2px dashed #92b0b3');
+            	};
+            	$elem.get(0).ondragend = $elem.get(0).ondragleave = function(e) {
+            		e.preventDefault();
+            		$(this).css('outline', 'none');
+            	};
+            }
+
+
+            enableFileDrop(
+                $(map._container),
+                function(file) {
+                    console.log(file);
+
+                    // cleanup old layer
+                    map.imageLayer && map.imageLayer.remove();
+
+                    // create file reader
+                    let reader = new FileReader();
+
+                    // parse file listener
+                    reader.onload = function(e) {
+                        // create image
+                        let img = new Image();
+                        img.src = e.target.result;
+                        // drawing of the test image - img1
+                        img.onload = function () {
+                            // load image onto map
+                            var bounds = [[0,0], [img.height, img.width]];
+                            var imageLayer = L.imageOverlay(e.target.result, bounds);
+                            imageLayer.addTo(map);
+                            map.imageLayer = imageLayer;
+                        	map.fitBounds(bounds);
+
+                            // TESTING
+                            enableGrid(bounds);
+                        };
+                    }
+
+                    // read file
+                    reader.readAsDataURL(file);
+                }
+            );
+
+
+            $('#cellSize').on('change', function(e) {
+                if (!map.imageLayer) {
+                    return;
+                }
+                var bbox = map.imageLayer.getBounds();
+                enableGrid([
+                    [bbox._southWest.lat, bbox._southWest.lng],
+                    [bbox._northEast.lat, bbox._northEast.lng]
+                ]);
+            });
+
+
+        </script>
+
+    </body>
+</html>
