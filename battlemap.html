@@ -125,6 +125,41 @@
 
 
 
+
+function preventPropogation(obj, map) {
+	// http://gis.stackexchange.com/questions/104507/disable-panning-dragging-on-leaflet-map-for-div-within-map
+	// Disable dragging when user's cursor enters the element
+	if(obj.getContainer != undefined){
+		obj = obj.getContainer();
+	}
+
+	if(obj.get != undefined){
+		obj = obj.get(0);
+	}
+
+	// fixed non-passive event warning
+	// https://stackoverflow.com/questions/52309356/overlay-div-over-leaflet-and-stop-mouse-action-propagation
+	// https://github.com/Leaflet/Leaflet/pull/6694
+	L.DomEvent.disableScrollPropagation(obj);
+	L.DomEvent.disableClickPropagation(obj);
+
+	// Touch screens
+	obj.addEventListener('touchstart', function (e) {
+		if(map.getContainer() == e.fromElement){
+			return;
+		}
+		if(e.buttons > 0){
+			return;
+		}
+		map.dragging.disable();
+	}, {passive: true});
+
+	obj.addEventListener('touchend', function (e) {
+		map.dragging.enable();
+	}, {passive: true});
+}
+
+
             // http://bl.ocks.org/jdarling/06019d16cb5fd6795edf
             var randomColor = (function(){
                 var golden_ratio_conjugate = 0.618033988749895;
@@ -213,6 +248,14 @@
                         })
                         .on('change', function(e) {
                             self.onFileUpload(this.files[0]);
+                        }),
+
+                    $enableDrawModeInput: $('<input>', {
+                            type: 'checkbox'
+                        })
+                        .on('change', function(e) {
+                            $(this).is(':checked') ?
+                                self.enableDraw() : self.disableDraw();
                         })
                 };
 
@@ -324,10 +367,15 @@
                             $('<div>').append(
                                 'Grid size (pixels) ',
                                 self.elements.$cellSizeInput
+                            ),
+                            $('<div>').append(
+                                'Enable draw mode ',
+                                self.elements.$enableDrawModeInput
                             )
                         )[0];
                 };
                 this.controls.addTo(this.map);
+                preventPropogation(this.controls, this.map);
 
                 enableFileDrop(
                     $(this.map._container),
