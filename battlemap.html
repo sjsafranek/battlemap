@@ -12,6 +12,9 @@
         <link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css" integrity="sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ==" crossorigin=""/>
         <script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js" integrity="sha512-gZwIG9x3wUXg2hdXF6+rVkLF/0Vi9U8D2Ntg4Ga5I5BZpVkVxlJWbSQtXPSiUTtC0TjtGOmxa1AJPuV0CPthew==" crossorigin=""></script>
 
+        <!-- https://github.com/Sumbera/gLayers.Leaflet/blob/master/L.CanvasLayer.js -->
+        <script src="https://cdn.jsdelivr.net/gh/Sumbera/gLayers.Leaflet/L.CanvasLayer.js"></script>
+
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
 
     	<style>
@@ -67,7 +70,7 @@
         <script>
 
 
-
+/*
             // by Chtiwi Malek
             // http://www.codicode.com
             function enableDraw() {
@@ -117,50 +120,7 @@
                     context.clearRect(0, 0, context.canvas.width, context.canvas.height);
                 });
             }
-
-            // enableDraw();
-                        //
-                        //
-                        // function enableGrid (height, width) {
-                        //     let canvas = document.getElementById('gridCanvas');
-                        //     let context = canvas.getContext('2d')
-                        //     canvas.width  = $(window).width();
-                        //     canvas.height = 1000;
-                        //
-                        //     let s = 28;
-                        //     let nX = Math.floor(canvas.width / s) - 2;
-                        //     let nY = Math.floor(canvas.height / s) - 2;
-                        //     let pX = canvas.width - nX * s;
-                        //     let pY = canvas.height - nY * s;
-                        //
-                        //     // Bonus code for choosing nX instead of s
-                        //     // let nX = 20;
-                        //     // let s = Math.floor(this.width / (nX + 2));
-                        //     // let pX = this.width - nX * s;
-                        //     // let nY = Math.floor((this.height - pX) / (this.width - pX) * nX);
-                        //     // let pY = this.height - nY * s;
-                        //
-                        //     let pL = Math.ceil(pX / 2) - 0.5;
-                        //     let pT = Math.ceil(pY / 2) - 0.5;
-                        //     let pR = canvas.width - nX * s - pL;
-                        //     let pB = canvas.height - nY * s - pT;
-                        //
-                        //     context.strokeStyle = 'lightgrey';
-                        //     context.beginPath();
-                        //     for (var x = pL; x <= canvas.width - pR; x += s) {
-                        //         context.moveTo(x, pT);
-                        //         context.lineTo(x, canvas.height - pB);
-                        //     }
-                        //     for (var y = pT; y <= canvas.height - pB; y += s) {
-                        //         context.moveTo(pL, y);
-                        //         context.lineTo(canvas.width - pR, y);
-                        //     }
-                        //     context.stroke();
-                        // }
-
-
-            // enableGrid();
-
+*/
 
 
 
@@ -232,6 +192,8 @@
             var App = function(mapId) {
                 var self = this;
 
+                this._drawing = false;
+
                 // resources
                 this.elements = {
                     $cellSizeInput: $('<input>', {
@@ -272,6 +234,84 @@
                     self.addMarker(e);
                 });
 
+
+
+                // drawing
+                this.drawLayer = L.canvasLayer()
+                    .delegate(this) // -- if we do not inherit from L.CanvasLayer we can setup a delegate to receive events from L.CanvasLayer
+                    .addTo(this.map);
+
+                this._mouseDown = false;
+                this.drawFeatures = [
+                    {
+                       lineWidth: 2,
+                       strokeStyle: 'black',
+                       path: []
+                   }
+                ];
+
+                this.map.on('mousedown', function(e) {
+                    if (self._drawing) {
+                        self._mouseDown = true;
+                    }
+                });
+
+                this.map.on('mouseup', function(e) {
+                    if (self._drawing) {
+                        self._mouseDown = false;
+                        self.drawFeatures.push({
+                            lineWidth: 2,
+                            strokeStyle: 'black',
+                            path: []
+                        });
+                    }
+                });
+
+                this.map.on('mousemove', function(e) {
+                    if (self._drawing && self._mouseDown) {
+                        self.drawFeatures[self.drawFeatures.length-1].path.push(e.latlng);
+                        self.drawLayer.drawLayer();
+                    }
+                });
+
+                this.onDrawLayer = function(info) {
+                    var ctx = info.canvas.getContext('2d');
+                    ctx.clearRect(0, 0, info.canvas.width, info.canvas.height);
+                    ctx.fillStyle = "rgba(255,116,0, 0.2)";
+                    for (var i = 0; i < self.drawFeatures.length; i++) {
+
+                        let last = null;
+                        ctx.beginPath();
+                        ctx.strokeStyle = self.drawFeatures[i].strokeStyle;
+                        ctx.lineWidth = self.drawFeatures[i].lineWidth;
+                        ctx.lineJoin = "round";
+
+                        for (var j=0; j<self.drawFeatures[i].path.length; j++) {
+                            var d = self.drawFeatures[i].path[j];
+                            if (info.bounds.contains(d)) {
+                                var dot = info.layer._map.latLngToContainerPoint(d);
+                                if (last) {
+                                    ctx.moveTo(last.x, last.y);
+                                    ctx.lineTo(dot.x, dot.y);
+                                }
+                                last = dot;
+                            }
+                            else {
+                                last = null;
+                            }
+                        }
+
+                        // ctx.closePath();
+                        ctx.stroke();
+
+                    }
+                };
+                //.end
+
+
+
+
+
                 // initialize controls
                 this.controls = L.control({position: 'topright'});
                 this.controls.onAdd = function(map) {
@@ -279,7 +319,6 @@
                         .addClass('leaflet-control controls')
                         .append(
                             $('<div>').append(
-                                // 'Upload file ',
                                 self.elements.$fileUploadInput
                             ),
                             $('<div>').append(
@@ -429,7 +468,21 @@
                 marker.addTo(this.map);
             }
 
+            App.prototype.enableDraw = function() {
+                this._drawing = true;
+                this.map.touchZoom.disable();
+                this.map.doubleClickZoom.disable();
+                this.map.scrollWheelZoom.disable();
+                this.map.dragging.disable();
+            }
 
+            App.prototype.disableDraw = function() {
+                this._drawing = false;
+                this.map.touchZoom.enable();
+                this.map.doubleClickZoom.enable();
+                this.map.scrollWheelZoom.enable();
+                this.map.dragging.enable();
+            }
 
             var app = new App('map');
 
