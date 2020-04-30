@@ -30,30 +30,20 @@
                 width: 100%;
             }
 
-
-
-            /*    by Chtiwi Malek      */
-            /* http://www.codicode.com */
-            body {
-                /*margin: 0;*/
-                /*overflow:hidden;*/
-                /*height: 100%;*/
-                /*width: 100%;*/
+            .controls {
+                background-color: #fff;
+                border-bottom: 1px solid #ccc;
+                border-radius: 4px;
+                padding: 4px 6px;
             }
 
             /*#drawCanvas {
                 background: transparent;
                 position: absolute;
             }
-
-            #gridCanvas {
-                background-color: #fff;
-                position: absolute;
-                width: 100%;
-                height: 100%;
             }*/
 
-            .controls {
+            /*.controls {
                 position:absolute;
                 top: 8px;
                 right: 8px;
@@ -63,7 +53,7 @@
                 color: #fff;
                 -webkit-border-radius: 4px;
                 border-radius: 4px;
-            }
+            }*/
 
 
 
@@ -73,35 +63,6 @@
     <body>
 
         <div id='map'></div>
-
-        <!-- <canvas id="gridCanvas"></canvas> -->
-        <!-- <canvas id="drawCanvas"></canvas> -->
-        <div class="controls">
-            Grid size (pixels) <input id="cellSize" type="number" min=5 max=1000 value=100>
-            <!-- <button id="clearDrawCanvas">Clear Area</button>
-            Line width :
-            <select id="selWidth">
-                <option value="1">1</option>
-                <option value="3">3</option>
-                <option value="5" selected="selected">5</option>
-                <option value="7">7</option>
-                <option value="9">9</option>
-                <option value="11">11</option>
-            </select>
-            Color :
-            <select id="selColor">
-                <option value="black">black</option>
-                <option value="blue" selected="selected">blue</option>
-                <option value="red">red</option>
-                <option value="green">green</option>
-                <option value="yellow">yellow</option>
-                <option value="gray">gray</option>
-                <option value="white">white</option>
-            </select> -->
-        </div>
-
-
-
 
         <script>
 
@@ -203,63 +164,46 @@
 
 
 
-        	var map = L.map('map', {
-        		crs: L.CRS.Simple,
-                minZoom: -5
-        	});
-        	map.fitBounds([[0,0], [1000,1000]]);
 
-            // map.createPane('grid');
-            // var pane = map.getPane('grid');
-            // $(pane).append(
-            //     $('<canvas>').attr('id', 'grid')
-            // );
+            // http://bl.ocks.org/jdarling/06019d16cb5fd6795edf
+            var randomColor = (function(){
+                var golden_ratio_conjugate = 0.618033988749895;
+                var h = Math.random();
 
-            map.imageLayer = null;
-            map.gridLayer = null;
+                var hslToRgb = function (h, s, l){
+                    var r, g, b;
+
+                    if(s == 0){
+                        r = g = b = l; // achromatic
+                    }
+                    else {
+                        function hue2rgb(p, q, t){
+                            if(t < 0) t += 1;
+                            if(t > 1) t -= 1;
+                            if(t < 1/6) return p + (q - p) * 6 * t;
+                            if(t < 1/2) return q;
+                            if(t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                            return p;
+                        }
+
+                        var q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                        var p = 2 * l - q;
+                        r = hue2rgb(p, q, h + 1/3);
+                        g = hue2rgb(p, q, h);
+                        b = hue2rgb(p, q, h - 1/3);
+                    }
+
+                    return '#'+Math.round(r * 255).toString(16)+Math.round(g * 255).toString(16)+Math.round(b * 255).toString(16);
+                };
+
+                return function(){
+                    h += golden_ratio_conjugate;
+                    h %= 1;
+                    return hslToRgb(h, 0.5, 0.60);
+                };
+            })();
 
 
-            function enableGrid(bounds) {
-                let cellSize = parseInt($('#cellSize').val());
-
-                // cleanup old layer
-                map.gridLayer && map.gridLayer.remove();
-
-                let canvas = $('<canvas>')[0];
-                let context = canvas.getContext('2d');
-                canvas.height = bounds[1][0];
-                canvas.width  = bounds[1][1];
-
-                // let s = 28;
-                let s = cellSize;
-                let nX = Math.floor(canvas.width / s) - 2;
-                let nY = Math.floor(canvas.height / s) - 2;
-                let pX = canvas.width - nX * s;
-                let pY = canvas.height - nY * s;
-
-                let pL = Math.ceil(pX / 2) - 0.5;
-                let pT = Math.ceil(pY / 2) - 0.5;
-                let pR = canvas.width - nX * s - pL;
-                let pB = canvas.height - nY * s - pT;
-
-                context.strokeStyle = 'black';
-                context.lineWidth = 2;
-                context.setLineDash([5, 3])
-                context.beginPath();
-                for (var x = pL; x <= canvas.width - pR; x += s) {
-                    context.moveTo(x, pT);
-                    context.lineTo(x, canvas.height - pB);
-                }
-                for (var y = pT; y <= canvas.height - pB; y += s) {
-                    context.moveTo(pL, y);
-                    context.lineTo(canvas.width - pR, y);
-                }
-                context.stroke();
-
-                var gridLayer = L.imageOverlay(canvas.toDataURL(), bounds);
-                gridLayer.addTo(map);
-                map.gridLayer = gridLayer;
-            }
 
 
             function enableFileDrop($elem, callback) {
@@ -284,52 +228,224 @@
             }
 
 
-            enableFileDrop(
-                $(map._container),
-                function(file) {
-                    console.log(file);
 
-                    // cleanup old layer
-                    map.imageLayer && map.imageLayer.remove();
+            var App = function(mapId) {
+                var self = this;
 
-                    // create file reader
-                    let reader = new FileReader();
+                // resources
+                this.elements = {
+                    $cellSizeInput: $('<input>', {
+                            id: 'cellSize',
+                            type: 'number',
+                            min: 5,
+                            max: 1000,
+                            value: 100
+                        })
+                        .on('change', function(e) {
+                            self.onCellSizeChange(e);
+                        }),
 
-                    // parse file listener
-                    reader.onload = function(e) {
-                        // create image
-                        let img = new Image();
-                        img.src = e.target.result;
-                        // drawing of the test image - img1
-                        img.onload = function () {
-                            // load image onto map
-                            var bounds = [[0,0], [img.height, img.width]];
-                            var imageLayer = L.imageOverlay(e.target.result, bounds);
-                            imageLayer.addTo(map);
-                            map.imageLayer = imageLayer;
-                        	map.fitBounds(bounds);
+                    $fileUploadInput: $('<input>', {
+                            type: 'file',
+                            accept: 'image/png, image/jpeg'
+                        })
+                        .on('change', function(e) {
+                            self.onFileUpload(this.files[0]);
+                        })
+                };
 
-                            // TESTING
-                            enableGrid(bounds);
-                        };
+                // container for layers
+                this.layers = {
+                    imageLayer: null,
+                    gridLayer: null
+                };
+
+                // initialize map
+            	this.map = L.map(mapId, {
+            		crs: L.CRS.Simple,
+                    minZoom: -5
+            	});
+
+            	this.map.fitBounds([[0,0], [1000,1000]]);
+
+                this.map.on('contextmenu', function(e) {
+                    self.addMarker(e);
+                });
+
+                // initialize controls
+                this.controls = L.control({position: 'topright'});
+                this.controls.onAdd = function(map) {
+                    return $('<div>')
+                        .addClass('leaflet-control controls')
+                        .append(
+                            $('<div>').append(
+                                // 'Upload file ',
+                                self.elements.$fileUploadInput
+                            ),
+                            $('<div>').append(
+                                'Grid size (pixels) ',
+                                self.elements.$cellSizeInput
+                            )
+                        )[0];
+                };
+                this.controls.addTo(this.map);
+
+                enableFileDrop(
+                    $(this.map._container),
+                    function(file) {
+                        self.onFileUpload(file);
                     }
+                );
 
-                    // read file
-                    reader.readAsDataURL(file);
+            }
+
+            App.prototype.onFileUpload = function(file) {
+                var self = this;
+
+                // create file reader
+                let reader = new FileReader();
+
+                // parse file listener
+                reader.onload = function(e) {
+                    // create image
+                    let img = new Image();
+                    img.src = e.target.result;
+                    // drawing of the test image - img1
+                    img.onload = function () {
+                        // load image onto map
+                        var bounds = [[0,0], [img.height, img.width]];
+                        var imageLayer = L.imageOverlay(e.target.result, bounds);
+                        imageLayer.addTo(self.map);
+
+                        // cleanup old layer
+                        this.imageLayer && this.imageLayer.remove();
+
+                        // add new layer                        //
+                        self.imageLayer = imageLayer;
+
+                        self.map.fitBounds(bounds);
+
+                        // draw battle grid
+                        self.drawGrid(bounds);
+                    };
                 }
-            );
 
+                // read file
+                reader.readAsDataURL(file);
+            }
 
-            $('#cellSize').on('change', function(e) {
-                if (!map.imageLayer) {
+            App.prototype.onCellSizeChange = function(e) {
+                if (!this.imageLayer) {
                     return;
                 }
-                var bbox = map.imageLayer.getBounds();
-                enableGrid([
+                var bbox = this.imageLayer.getBounds();
+                this.drawGrid([
                     [bbox._southWest.lat, bbox._southWest.lng],
                     [bbox._northEast.lat, bbox._northEast.lng]
                 ]);
-            });
+            }
+
+            App.prototype.drawGrid = function(bounds) {
+                // cleanup old layer
+                this.gridLayer && this.gridLayer.remove();
+
+                let canvas = $('<canvas>')[0];
+                let context = canvas.getContext('2d');
+                canvas.height = bounds[1][0];
+                canvas.width  = bounds[1][1];
+
+                let s = parseInt(this.elements.$cellSizeInput.val());
+                let nX = Math.floor(canvas.width / s) - 2;
+                let nY = Math.floor(canvas.height / s) - 2;
+                let pX = canvas.width - nX * s;
+                let pY = canvas.height - nY * s;
+
+                let pL = Math.ceil(pX / 2) - 0.5;
+                let pT = Math.ceil(pY / 2) - 0.5;
+                let pR = canvas.width - nX * s - pL;
+                let pB = canvas.height - nY * s - pT;
+
+                context.strokeStyle = 'black';
+                context.lineWidth = 2;
+                context.setLineDash([5, 3])
+                context.beginPath();
+                for (var x = pL; x <= canvas.width - pR; x += s) {
+                    context.moveTo(x, pT);
+                    context.lineTo(x, canvas.height - pB);
+                }
+                for (var y = pT; y <= canvas.height - pB; y += s) {
+                    context.moveTo(pL, y);
+                    context.lineTo(canvas.width - pR, y);
+                }
+                context.stroke();
+
+                // cleanup old layer
+                this.gridLayer && this.gridLayer.remove();
+                var gridLayer = L.imageOverlay(canvas.toDataURL(), bounds);
+                gridLayer.addTo(this.map);
+                this.gridLayer = gridLayer;
+            }
+
+            App.prototype.addMarker = function(e) {
+                this._count = this._count || 1;
+                this._count++;
+
+                var color = randomColor();
+                const myCustomColour = color;
+
+                const markerHtmlStyles = `
+                    background-color: ${myCustomColour};
+                    width: 2rem;
+                    height: 2rem;
+                    display: block;
+                    left: -1.5rem;
+                    top: -1.5rem;
+                    position: relative;
+                    border-radius: 3rem 3rem 0;
+                    transform: rotate(45deg);
+                    border: 1px solid #FFFFFF;
+                `;
+
+                const icon = L.divIcon({
+                    className: "my-custom-pin",
+                    iconAnchor: [0, 24],
+                    labelAnchor: [-6, 0],
+                    popupAnchor: [0, -36],
+                    html: `<span style="${markerHtmlStyles}">`+this._count+`</span>`
+                });
+
+                let marker = L.marker(
+                    e.latlng,
+                    {
+                        icon: icon,
+                        draggable: true
+                    });
+
+                marker.on('contextmenu', function(e) {
+                    e.originalEvent.stopPropagation();
+                    this.remove();
+                });
+
+                marker.addTo(this.map);
+            }
+
+
+
+            var app = new App('map');
+
+
+
+
+            // map.createPane('grid');
+            // var pane = map.getPane('grid');
+            // $(pane).append(
+            //     $('<canvas>').attr('id', 'grid')
+            // );
+
+
+
+
+
 
 
         </script>
