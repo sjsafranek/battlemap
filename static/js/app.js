@@ -317,7 +317,7 @@ App.prototype.onDrawLayer = function(event) {
         // TODO check if canvas is empty
         if (isCanvasBlank(event.canvas) && this.drawFeatures.length > 1) {
             console.log("isCanvasBlank before splice", this.drawFeatures.length);
-            this.drawFeatures = this.drawFeatures.splice(i+1);
+            this.drawFeatures = this.drawFeatures.splice(i);
             console.log("isCanvasBlank after splice", this.drawFeatures.length);
             this.onDrawLayer(event);
             return;
