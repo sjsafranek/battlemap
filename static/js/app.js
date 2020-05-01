@@ -89,17 +89,24 @@ L.PaintLayer = L.CanvasLayer.extend({
             ctx.globalCompositeOperation = (feature.erase ? 'destination-out' : 'source-over');
 
             ctx.beginPath();
-            ctx.strokeStyle = feature.strokeStyle;
-            ctx.lineWidth = feature.lineWidth;
             ctx.lineJoin = "round";
+            ctx.lineWidth = feature.lineWidth;
+            ctx.strokeStyle = feature.strokeStyle;
 
             for (var j=0; j<feature.path.length; j++) {
                 var latlng = feature.path[j];
                 var dot = map.latLngToContainerPoint(latlng);
+                /*
                 if (last) {
-                    ctx.moveTo(last.x, last.y);
+                    // ctx.moveTo(last.x, last.y);
                     ctx.lineTo(dot.x, dot.y);
+                } else {
+                    ctx.moveTo(last.x, last.y);
                 }
+                */
+                last ?
+                    ctx.lineTo(dot.x, dot.y) :
+                    ctx.moveTo(last.x, last.y);
                 last = dot;
             }
 
