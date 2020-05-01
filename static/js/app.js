@@ -96,23 +96,9 @@ L.PaintLayer = L.CanvasLayer.extend({
             for (var j=0; j<feature.path.length; j++) {
                 var latlng = feature.path[j];
                 var dot = map.latLngToContainerPoint(latlng);
-
-                // if (last) {
-                //     // ctx.moveTo(last.x, last.y);
-                //     ctx.lineTo(dot.x, dot.y);
-                // } else {
-                //     ctx.moveTo(dot.x, dot.y);
-                // }
-
-                // last ?
-                //     ctx.moveTo(dot.x, dot.y) :
-                //     ctx.lineTo(dot.x, dot.y);
-                //
-                // last = dot;
                 j ?
                     ctx.lineTo(dot.x, dot.y) :
                     ctx.moveTo(dot.x, dot.y);
-
             }
 
             // ctx.closePath();
