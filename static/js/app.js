@@ -315,7 +315,13 @@ App.prototype.onDrawLayer = function(event) {
         ctx.stroke();
 
         // TODO check if canvas is empty
-        console.log('isCanvasBlank', isCanvasBlank(event.canvas));
+        if (isCanvasBlank(event.canvas)) {
+            console.log("isCanvasBlank before splice", this.drawFeatures.length);
+            this.drawFeatures = this.drawFeatures.splice(i+1);
+            console.log("isCanvasBlank after splice", this.drawFeatures.length);
+            this.onDrawLayer(event);
+            return;
+        }
 
     }
 };
