@@ -314,9 +314,9 @@ App.prototype.onDrawLayer = function(event) {
         // ctx.closePath();
         ctx.stroke();
 
-        // TODO check if canvas is empty
+        // Check if canvas is empty
+        // Clean up artifacts
         if (isCanvasBlank(event.canvas) && this.drawFeatures.length > 1) {
-            console.log("isCanvasBlank before splice", this.drawFeatures.length);
             this.drawFeatures = [];
             this.drawFeatures.push({
                 erase: this.elements.$eraseDrawingInput.is(':checked'),
@@ -324,7 +324,6 @@ App.prototype.onDrawLayer = function(event) {
                 strokeStyle: this.elements.$strokeColorInput.val(),
                 path: []
             });
-            console.log("isCanvasBlank after splice", this.drawFeatures.length);
             this.onDrawLayer(event);
             return;
         }
