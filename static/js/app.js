@@ -14,6 +14,144 @@ function isCanvasBlank(canvas) {
 
 
 
+
+L.PaintLayer = L.CanvasLayer.extend({
+
+    initialize: function(options) {
+        this._painting = false;
+        this._mouseDown = false;
+
+        this.settings = {
+            lineWidth: 4,
+            strokeStyle: "#000000",
+            erase: false
+        }
+
+        L.CanvasLayer.prototype.initialize.call(this, options);
+
+        this.delegate(this);
+
+        this.features = [this._makeFeature()];
+    },
+
+    clear: function() {
+        this.features = [this._makeFeature()];
+        this.drawLayer();
+    },
+
+    _makeFeature: function() {
+        var settings = JSON.parse(JSON.stringify(this.settings));
+        return {
+            erase: settings.erase,
+            lineWidth: settings.lineWidth,
+            strokeStyle: settings.strokeStyle,
+            path: []
+        }
+    },
+
+    onAdd: function(map) {
+        var self = this;
+
+        L.CanvasLayer.prototype.onAdd.call(this, map);
+
+        this._map
+            .on('mousedown', function(event) {
+                if (self._painting) {
+                    self._mouseDown = true;
+                }
+            })
+            .on('mouseup', function(event) {
+                if (self._painting) {
+                    self._mouseDown = false;
+                    self.features[self.features.length-1].path.length &&
+                        self.features.push(self._makeFeature());
+                }
+            })
+            .on('mousemove', function(event) {
+                if (self._painting && self._mouseDown) {
+                    self.features[self.features.length-1].path.push(event.latlng);
+                    self.drawLayer();
+                }
+            });
+
+    },
+
+    onDrawLayer: function(event) {
+        var map = event.layer._map;
+        var ctx = event.canvas.getContext('2d');
+        ctx.clearRect(0, 0, event.canvas.width, event.canvas.height);
+
+        for (var i = 0; i < this.features.length; i++) {
+            let feature = this.features[i];
+            let last = null;
+
+            // https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/globalCompositeOperation
+            ctx.globalCompositeOperation = (feature.erase ? 'destination-out' : 'source-over');
+
+            ctx.beginPath();
+            ctx.strokeStyle = feature.strokeStyle;
+            ctx.lineWidth = feature.lineWidth;
+            ctx.lineJoin = "round";
+
+            for (var j=0; j<feature.path.length; j++) {
+                var latlng = feature.path[j];
+                var dot = map.latLngToContainerPoint(latlng);
+                if (last) {
+                    ctx.moveTo(last.x, last.y);
+                    ctx.lineTo(dot.x, dot.y);
+                }
+                last = dot;
+            }
+
+            // ctx.closePath();
+            ctx.stroke();
+
+            // Check if canvas is empty
+            // Clean up artifacts
+            if (isCanvasBlank(event.canvas) && this.features.length > 1) {
+                this.features = [this._makeFeature()];
+                this.onDrawLayer(event);
+                return;
+            }
+
+        }
+    },
+
+    enable: function() {
+        this._painting = true;
+    },
+
+    disable: function() {
+        this._painting = false;
+    },
+
+    enableErase: function() {
+        this.settings.erase = true;
+        this.features[this.features.length-1].erase = true;
+    },
+
+    disableErase: function() {
+        this.settings.erase = false;
+        this.features[this.features.length-1].erase = false;
+    },
+
+    applySettings: function(settings) {
+        for (var i in settings) {
+            this.settings[i] = settings[i];
+            this.features[this.features.length-1][i] = settings[i];
+        }
+    }
+
+});
+
+L.paintLayer = function () {
+    return new L.PaintLayer();
+};
+
+
+
+
+
 var App = function(mapId) {
     var self = this;
 
@@ -41,8 +179,11 @@ var App = function(mapId) {
     //     }
     // );
 
+    // initialize paint layer
+    this.paintLayer = L.paintLayer();
+    this.paintLayer.addTo(this.map);
+
     this._addControls();
-    this._addDrawing();
 
     // initialize grid
 	this.map.fitBounds([[0, 0], [2000, 2000]]);
@@ -50,60 +191,8 @@ var App = function(mapId) {
     this.map.setZoom(this.map.getZoom()+1)
 }
 
-App.prototype._addDrawing = function() {
-    var self = this;
-
-    this._drawing = false;
-    this._mouseDown = false;
-
-    this.drawLayer = L.canvasLayer()
-        .delegate(this)     // -- if we do not inherit from L.CanvasLayer we can setup a delegate to receive events from L.CanvasLayer
-        .addTo(this.map);
-
-    this.drawFeatures = [
-        {
-            erase: this.elements.$eraseDrawingInput.is(':checked'),
-            lineWidth: parseInt(this.elements.$lineWidthInput.val()),
-            strokeStyle: this.elements.$strokeColorInput.val(),
-            path: []
-        }
-    ];
-
-    this.map.on('mousedown', function(e) {
-        if (self._drawing) {
-            self._mouseDown = true;
-        }
-    });
-
-    this.map.on('mouseup', function(e) {
-        if (self._drawing) {
-            self._mouseDown = false;
-            self.drawFeatures[self.drawFeatures.length-1].path.length &&
-                self.drawFeatures.push({
-                    erase: self.elements.$eraseDrawingInput.is(':checked'),
-                    lineWidth: parseInt(self.elements.$lineWidthInput.val()),
-                    strokeStyle: self.elements.$strokeColorInput.val(),
-                    path: []
-                });
-        }
-    });
-
-    this.map.on('mousemove', function(e) {
-        if (self._drawing && self._mouseDown) {
-            self.drawFeatures[self.drawFeatures.length-1].path.push(e.latlng);
-            self.drawLayer.drawLayer();
-        }
-    });
-}
-
-App.prototype.clearDrawing = function() {
-    this.drawFeatures = [{
-        erase: this.elements.$eraseDrawingInput.is(':checked'),
-        lineWidth: parseInt(this.elements.$lineWidthInput.val()),
-        strokeStyle: this.elements.$strokeColorInput.val(),
-        path: []
-    }];
-    this.drawLayer.drawLayer();
+App.prototype.clearPainting = function() {
+    this.paintLayer.clear();
 }
 
 App.prototype._addControls = function() {
@@ -134,14 +223,14 @@ App.prototype._addControls = function() {
                 self.onFileUpload(this.files[0]);
             }),
 
-        $enableDrawModeInput: $('<input>', {
-                id: 'enableDraw',
+        $enablePaintingModeInput: $('<input>', {
+                id: 'enablePainting',
                 type: 'checkbox'
             })
             .addClass('form-check-input')
             .on('change', function(e) {
                 $(this).is(':checked') ?
-                    self.enableDraw() : self.disableDraw();
+                    self.enablePainting() : self.disablePainting();
             }),
 
         $lineWidthInput: $('<input>', {
@@ -150,21 +239,25 @@ App.prototype._addControls = function() {
                 step: 2,
                 min: 2,
                 max: 64,
-                value: 4
+                value: self.paintLayer.settings.lineWidth
             })
             .addClass('form-control form-control-sm')
             .on('change', function(e) {
-                self.onLineWidthChange(parseInt(this.value));
+                self.paintLayer.applySettings({
+                    'lineWidth': parseInt(this.value)
+                });
             }),
 
         $strokeColorInput: $('<input>', {
                 id: 'strokeColor',
                 type: 'color',
-                value: '#000000'
+                value: self.paintLayer.settings.strokeStyle
             })
             .addClass('form-control form-control-sm')
             .on('change', function(e) {
-                self.onStrokeColorChange(this.value);
+                self.paintLayer.applySettings({
+                    'strokeStyle': this.value
+                });
             }),
 
         $eraseDrawingInput: $('<input>', {
@@ -174,7 +267,7 @@ App.prototype._addControls = function() {
             .addClass('form-check-input')
             .on('change', function(e) {
                 $(this).is(':checked') ?
-                    self.enableErase() : self.disableErase();
+                    self.paintLayer.enableErase() : self.paintLayer.disableErase();
             }),
 
     };
@@ -213,8 +306,8 @@ App.prototype._addControls = function() {
                 $('<div>')
                     .addClass('form-group mb-2 form-check form-check-inline')
                     .append(
-                        self.elements.$enableDrawModeInput,
-                        $('<label>', {for: 'enableDraw'})
+                        self.elements.$enablePaintingModeInput,
+                        $('<label>', {for: 'enablePainting'})
                             .addClass('form-check-label')
                             .append('Draw mode')
                     ),
@@ -262,74 +355,6 @@ App.prototype._addControls = function() {
     this.controls.addTo(this.map);
     L.preventPropogation(this.controls, this.map);
 }
-
-App.prototype.onLineWidthChange = function(lineWidth) {
-    this.drawFeatures[this.drawFeatures.length-1].lineWidth = lineWidth;
-}
-
-App.prototype.onStrokeColorChange = function(strokeColor) {
-    this.drawFeatures[this.drawFeatures.length-1].strokeStyle = strokeColor;
-}
-
-App.prototype.enableErase = function() {
-    this.drawFeatures[this.drawFeatures.length-1].erase = true;
-}
-
-App.prototype.disableErase = function() {
-    this.drawFeatures[this.drawFeatures.length-1].erase = false;
-}
-
-App.prototype.onDrawLayer = function(event) {
-    var map = event.layer._map;
-    var ctx = event.canvas.getContext('2d');
-    ctx.clearRect(0, 0, event.canvas.width, event.canvas.height);
-
-    for (var i = 0; i < this.drawFeatures.length; i++) {
-        let feature = this.drawFeatures[i];
-        let last = null;
-
-        // https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/globalCompositeOperation
-        ctx.globalCompositeOperation = (feature.erase ? 'destination-out' : 'source-over');
-
-        ctx.beginPath();
-        ctx.strokeStyle = feature.strokeStyle;
-        ctx.lineWidth = feature.lineWidth;
-        ctx.lineJoin = "round";
-
-        for (var j=0; j<feature.path.length; j++) {
-            var latlng = feature.path[j];
-            // if (!event.bounds.contains(latlng)) {
-            //     last = null;
-            //     return;
-            // }
-
-            var dot = map.latLngToContainerPoint(latlng);
-            if (last) {
-                ctx.moveTo(last.x, last.y);
-                ctx.lineTo(dot.x, dot.y);
-            }
-            last = dot;
-        }
-
-        // ctx.closePath();
-        ctx.stroke();
-
-        // Check if canvas is empty
-        // Clean up artifacts
-        if (isCanvasBlank(event.canvas) && this.drawFeatures.length > 1) {
-            this.drawFeatures = [];
-            this.drawFeatures.push({
-                erase: this.elements.$eraseDrawingInput.is(':checked'),
-                lineWidth: parseInt(this.elements.$lineWidthInput.val()),
-                strokeStyle: this.elements.$strokeColorInput.val(),
-                path: []
-            });
-            this.onDrawLayer(event);
-            return;
-        }
-
-    }
-};
 
 App.prototype.onFileUpload = function(file) {
     var self = this;
@@ -480,18 +505,18 @@ App.prototype.addMarker = function(e) {
     marker.addTo(this.map);
 }
 
-App.prototype.enableDraw = function() {
+App.prototype.enablePainting = function() {
     $('.draw-controls').show();
-    this._drawing = true;
+    this.paintLayer.enable();
     this.map.touchZoom.disable();
     this.map.doubleClickZoom.disable();
     this.map.scrollWheelZoom.disable();
     this.map.dragging.disable();
 }
 
-App.prototype.disableDraw = function() {
+App.prototype.disablePainting = function() {
     $('.draw-controls').hide();
-    this._drawing = false;
+    this.paintLayer.disable();
     this.map.touchZoom.enable();
     this.map.doubleClickZoom.enable();
     this.map.scrollWheelZoom.enable();
