@@ -319,9 +319,9 @@ App.prototype.onDrawLayer = function(event) {
             console.log("isCanvasBlank before splice", this.drawFeatures.length);
             this.drawFeatures = [];
             this.drawFeatures.push({
-                erase: self.elements.$eraseDrawingInput.is(':checked'),
-                lineWidth: parseInt(self.elements.$lineWidthInput.val()),
-                strokeStyle: self.elements.$strokeColorInput.val(),
+                erase: this.elements.$eraseDrawingInput.is(':checked'),
+                lineWidth: parseInt(this.elements.$lineWidthInput.val()),
+                strokeStyle: this.elements.$strokeColorInput.val(),
                 path: []
             });
             console.log("isCanvasBlank after splice", this.drawFeatures.length);
