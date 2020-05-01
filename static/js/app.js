@@ -105,8 +105,9 @@ L.PaintLayer = L.CanvasLayer.extend({
                 }
                 */
                 last ?
-                    ctx.lineTo(dot.x, dot.y) :
-                    ctx.moveTo(last.x, last.y);
+                    ctx.moveTo(last.x, last.y) :
+                    ctx.lineTo(dot.x, dot.y);
+
                 last = dot;
             }
 
