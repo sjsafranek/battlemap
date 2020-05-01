@@ -1,4 +1,18 @@
 
+// returns true if every pixel's uint32 representation is 0 (or "blank")
+// https://stackoverflow.com/questions/17386707/how-to-check-if-a-canvas-is-blank
+function isCanvasBlank(canvas) {
+    const context = canvas.getContext('2d');
+
+    const pixelBuffer = new Uint32Array(
+        context.getImageData(0, 0, canvas.width, canvas.height).data.buffer
+    );
+
+    return !pixelBuffer.some(color => color !== 0);
+}
+
+
+
 
 var App = function(mapId) {
     var self = this;
@@ -299,6 +313,10 @@ App.prototype.onDrawLayer = function(event) {
 
         // ctx.closePath();
         ctx.stroke();
+
+        // TODO check if canvas is empty
+        console.log('isCanvasBlank', isCanvasBlank(event.canvas));
+
     }
 };
 
