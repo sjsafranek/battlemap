@@ -452,6 +452,7 @@ App.prototype.drawGrid = function(bounds) {
     // context.setLineDash([5, 3])
     // context.setLineDash([10, 8])
     context.beginPath();
+
     for (var x = pL; x <= canvas.width - pR; x += cellSize) {
         context.moveTo(x, pT);
         context.lineTo(x, canvas.height - pB);
@@ -461,6 +462,19 @@ App.prototype.drawGrid = function(bounds) {
         context.lineTo(canvas.width - pR, y);
     }
     context.stroke();
+
+    // Populate cell names
+    var cx = 0;
+    for (var x = pL; x <= canvas.width - pR; x += cellSize) {
+        var cy = 0;
+        for (var y = pT; y <= canvas.height - pB; y += cellSize) {
+            context.font = "14px Arial";
+            // context.fillText(cx +','+cy, x+4, y-4);
+            context.fillText(cx +','+cy, x+4, y-cellSize+16);
+            cy++;
+        }
+        cx++;
+    }
 
     // cleanup old layer
     this.gridLayer && this.gridLayer.remove();
