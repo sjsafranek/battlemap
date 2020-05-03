@@ -85,33 +85,55 @@ L.PaintLayer = L.CanvasLayer.extend({
             let feature = this.features[i];
             let last = null;
 
+            if (!feature.path.length) {
+                continue;
+            }
+
+            // get scaling for zoom
+            var lineWidth = feature.lineWidth * this._map.options.crs.scale(this._map.getZoom());
+
+            // Toggle erasing
             // https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/globalCompositeOperation
             ctx.globalCompositeOperation = (feature.erase ? 'destination-out' : 'source-over');
 
+            // Draw path
             ctx.beginPath();
             ctx.lineJoin = "round";
-            ctx.lineWidth = feature.lineWidth;
+            ctx.lineWidth = lineWidth;
             ctx.strokeStyle = feature.strokeStyle;
-
             for (var j=0; j<feature.path.length; j++) {
                 var latlng = feature.path[j];
                 var dot = map.latLngToContainerPoint(latlng);
                 j ?
                     ctx.lineTo(dot.x, dot.y) :
-                    ctx.moveTo(dot.x, dot.y);
+                    ctx.moveTo(dot.x, dot.y)
             }
-
             // ctx.closePath();
             ctx.stroke();
+            //.end
 
-            // Check if canvas is empty
-            // Clean up artifacts
-            if (isCanvasBlank(event.canvas) && this.features.length > 1) {
-                this.features = [this._makeFeature()];
-                this.onDrawLayer(event);
-                return;
-            }
+            // draw circle at last point
+            ctx.beginPath();
+            var dot = map.latLngToContainerPoint(feature.path[0]);
+            ctx.arc(dot.x, dot.y, lineWidth/2, 0, 2 * Math.PI);
+            ctx.fillStyle = feature.strokeStyle;
+            ctx.fill();
 
+            // draw circle at first point
+            ctx.beginPath();
+            var dot = map.latLngToContainerPoint(feature.path[feature.path.length-1]);
+            ctx.arc(dot.x, dot.y, lineWidth/2, 0, 2 * Math.PI);
+            ctx.fillStyle = feature.strokeStyle;
+            ctx.fill();
+
+
+            // // Check if canvas is empty
+            // // Clean up artifacts
+            // if (isCanvasBlank(event.canvas) && this.features.length > 1) {
+            //     this.features = [this._makeFeature()];
+            //     this.onDrawLayer(event);
+            //     return;
+            // }
         }
     },
 
